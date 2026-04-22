@@ -17,6 +17,7 @@
   --wrong-color: #f44336;
   --bg-color: #f4f7f6;
   --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -446,10 +447,33 @@ body {
   line-height: 1.6;
 }
 
-.warning {
-  background: #fff3e0;
-  border-left: 4px solid #ff9800;
-  color: #e65100;
+.connection-status {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.connection-status.connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.connection-status.waiting {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.role-badge {
+  display: inline-block;
+  background: #667eea;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 8px;
 }
 </style>
 </head>
@@ -562,30 +586,57 @@ body {
 
 <script>
 // GAME DATA
+
+// Fisher-Yates Shuffle Algorithm
+function shuffleArray(array) {
+  const shuffled = [...array]; // Make a copy so we don't change original
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 const questions = [
-  { q: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
-  { q: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], correct: 1 },
-  { q: "Who painted the Mona Lisa?", options: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"], correct: 2 },
-  { q: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
-  { q: "In what year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
-  { q: "What is the smallest country in the world?", options: ["Monaco", "San Marino", "Vatican City", "Luxembourg"], correct: 2 },
-  { q: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "Shakespeare", "Dickens", "Bronte"], correct: 1 },
-  { q: "What is the hardest natural substance?", options: ["Gold", "Iron", "Diamond", "Platinum"], correct: 2 },
-  { q: "Which country has the most population?", options: ["India", "China", "USA", "Indonesia"], correct: 0 },
-  { q: "What is the speed of light?", options: ["299,792 km/s", "199,792 km/s", "399,792 km/s", "99,792 km/s"], correct: 0 },
-  { q: "Which city is the largest in Nigeria by population?", options: ["Abuja", "Lagos", "Kano", "Ibadan"], correct: 1 },
-  { q: "What is the name of the longest river in Nigeria?", options: ["Niger River", "Benue River", "Kaduna River", "Cross River"], correct: 0 }, 
-  { q: "Which Nigerian author won the Nobel Prize in Literature?", options: ["Chinua Achebe", "Wole Soyinka", "Chimamanda Ngozi Adichie", "Ben Okri"], correct: 1 },
-  { q: "What is the process by which green plants make their own food?", options: ["Respiration", "Transpiration", "Photosynthesis", "Digestion"], correct: 2 },
-  { q: "Which form of energy is associated with an object's motion?", options: ["Potential energy", "Kinetic energy", "Thermal energy", "Chemical energy"], correct: 1 },
-  { q: "What is the pH value of pure water at room temperature?", options: ["1", "5", "7", "14"], correct: 2 },
-  { q: "What term describes a market where share prices are rising, encouraging buying?", options: ["Bear market", "Stagnant market", "Bull market", "Recession"], correct: 2 },
-  { q: "In journalism, what is the 'Inverted Pyramid' structure used for?", options: ["Writing headlines", "Organizing news stories by importance", "Designing newspaper layouts", "Interviewing sources"], correct: 1 },
-  { q: "Which is the longest river in the world?", options: ["Amazon", "Nile", "Mississippi", "Yangtze"], correct: 1 },
-  { q: "What is the chemical symbol for gold?", options: ["Au", "Ag", "Gd", "Go"], correct: 0 },
-  { q: "Which part of the human brain is primarily responsible for balance and coordination?", options: ["Cerebrum", "Brainstem", "Cerebellum", "Hypothalamus"], correct: 2 },
-  { q: "What does 'Inflation' refer to in an economy?", options: ["Increase in the value of money", "General increase in prices", "Decrease in the total population", "Increase in gold reserves"], correct: 1 },
-  { q: "What is a 'Byline' in a newspaper article?", options: ["The main headline", "A line giving the name of the writer", "The summary at the end", "The date of publication"], correct: 1 },
+  { q: "Which is the only country in the world to have three official capital cities?", options: ["South Africa", "Nigeria", "Australia", "Bolivia"], correct: 0 },
+  { q: "What is the largest desert in the world (including polar regions)?", options: ["Sahara", "Gobi", "Antarctica", "Kalahari"], correct: 2 },
+  { q: "Mount Kilimanjaro, the highest mountain in Africa, is located in which country?", options: ["Kenya", "Tanzania", "Ethiopia", "Uganda"], correct: 1 },
+  { q: "Which Nigerian state is known as the 'Gateway State'?", options: ["Lagos", "Ogun", "Kwara", "Edo"], correct: 1 },
+  { q: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], correct: 2 },
+  { q: "What is the 'powerhouse' of the cell?", options: ["Nucleus", "Ribosome", "Mitochondria", "Vacuole"], correct: 2 },
+  { q: "Which blood type is known as the universal donor?", options: ["A+", "B-", "AB+", "O-"], correct: 3 },
+  { q: "What is the largest organ in the human body?", options: ["Heart", "Liver", "Skin", "Lungs"], correct: 2 },
+  { q: "Humans and chimpanzees share roughly what percentage of their DNA?", options: ["70%", "85%", "98%", "60%"], correct: 2 },
+  { q: "Which vitamin is primarily obtained from sunlight?", options: ["Vitamin A", "Vitamin C", "Vitamin D", "Vitamin B12"], correct: 2 },
+  { q: "Who developed the theory of General Relativity?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Stephen Hawking"], correct: 1 },
+  { q: "What is the unit of electrical resistance?", options: ["Volt", "Ampere", "Watt", "Ohm"], correct: 3 },
+  { q: "Which of these is a non-renewable source of energy?", options: ["Solar", "Wind", "Coal", "Hydroelectric"], correct: 2 },
+  { q: "What is the center of an atom called?", options: ["Electron", "Proton", "Nucleus", "Neutron"], correct: 2 },
+  { q: "Sound travels fastest through which of the following?", options: ["Air", "Water", "Steel", "Vacuum"], correct: 2 },
+  { q: "What is the most abundant gas in Earth's atmosphere?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], correct: 2 },
+  { q: "What is the chemical formula for common table salt?", options: ["H2O", "NaCl", "CO2", "KCl"], correct: 1 },
+  { q: "Which element has the atomic number 1?", options: ["Helium", "Oxygen", "Hydrogen", "Carbon"], correct: 2 },
+  { q: "What is the common name for solid Carbon Dioxide?", options: ["Dry Ice", "Quicklime", "Baking Soda", "Quartz"], correct: 0 },
+  { q: "Which metal is liquid at room temperature?", options: ["Gold", "Silver", "Mercury", "Copper"], correct: 2 },
+  { q: "What does GDP stand for?", options: ["Gross Domestic Product", "General Deposit Profit", "Global Development Plan", "Gross Daily Percentage"], correct: 0 },
+  { q: "In the stock market, what does 'IPO' stand for?", options: ["Internal Profit Option", "Initial Public Offering", "International Payment Order", "Investment Portfolio Overhaul"], correct: 1 },
+  { q: "Which organization is responsible for issuing the Naira in Nigeria?", options: ["EFCC", "CBN", "FIRS", "NNPC"], correct: 1 },
+  { q: "What is a 'Dividend'?", options: ["A type of debt", "A portion of company profit paid to shareholders", "The cost of a loan", "A tax on imports"], correct: 1 },
+  { q: "What is the main purpose of a 'Diversified' portfolio?", options: ["To maximize taxes", "To reduce risk by spreading investments", "To invest only in gold", "To hide money from the bank"], correct: 1 },
+  { q: "What is the term for a sensationalized or exaggerated news headline?", options: ["Hard news", "Clickbait", "Feature story", "Editorial"], correct: 1 },
+  { q: "What is 'Libel' in journalism?", options: ["Written defamation", "Spoken defamation", "A type of camera lens", "A secret source"], correct: 0 },
+  { q: "Which prize is considered the highest honor in American journalism?", options: ["Oscar", "Grammy", "Pulitzer Prize", "Nobel Prize"], correct: 2 },
+  { q: "What is an 'Editorial'?", options: ["A factual weather report", "An article expressing the editor's opinion", "A list of advertisements", "A sports summary"], correct: 1 },
+  { q: "What is 'Off the Record' information?", options: ["Information that can be quoted directly", "Information that cannot be published or attributed", "A story that is very popular", "A recording of a live event"], correct: 1 },
+  { q: "What is the square root of 144?", options: ["10", "12", "14", "16"], correct: 1 },
+  { q: "What is the value of Pi (π) to two decimal places?", options: ["3.12", "3.16", "3.14", "3.18"], correct: 2 },
+  { q: "If a triangle has angles of 90° and 45°, what is the third angle?", options: ["45°", "55°", "90°", "35°"], correct: 0 },
+  { q: "What is 7 multiplied by 8?", options: ["54", "56", "62", "64"], correct: 1 },
+  { q: "What is the Roman numeral for 50?", options: ["V", "X", "L", "C"], correct: 2 },
+  { q: "Which of these is a prime number?", options: ["9", "15", "17", "21"], correct: 2 },
+  { q: "What is the result of 2 + 2 × 2?", options: ["8", "6", "4", "10"], correct: 1 }, // Note: Follows BODMAS/PEMDAS
+  { q: "How many sides does a Heptagon have?", options: ["6", "7", "8", "9"], correct: 1 },
+  { q: "What is 15% of 200?", options: ["20", "25", "30", "35"], correct: 2 },
+  { q: "In algebra, what is the term for a number that does not change?", options: ["Variable", "Constant", "Coefficient", "Exponent"], correct: 1 }
 ];
 
 // STATE
@@ -593,7 +644,7 @@ let gameState = 'join'; // join, waiting, playing, results
 let gameCode = '';
 let playerName = '';
 let isHost = false;
-let players = {};
+let players = {1: []}; // { gameCode: [player1, player2, ...]}
 let scores = {};
 let currentQuestion = 0;
 let selectedAnswer = null;
@@ -740,10 +791,14 @@ function showStartButton() {
 function startGame() {
   if (!isHost) return;
 
+  // 🎲 SHUFFLE QUESTIONS!
+  const shuffledQuestions = shuffleArray(questions);
+  
   const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
   gameData.gameStarted = true;
   gameData.currentQuestion = 0;
   gameData.answers = {};
+  gameData.shuffledQuestions = shuffledQuestions; // Save shuffled questions
   localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
 
   startGameFromSync();
@@ -762,17 +817,21 @@ function startGameFromSync() {
 
 // SHOW QUESTION
 function showQuestion() {
-  if (currentQuestion >= questions.length) {
+  // Get shuffled questions from game data
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  const questionsToUse = gameData.shuffledQuestions || questions;
+  
+  if (currentQuestion >= questionsToUse.length) {
     showResults();
     return;
   }
 
-  const q = questions[currentQuestion];
-  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+  const q = questionsToUse[currentQuestion]; // Use shuffled questions
+  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${questionsToUse.length}`;
   document.getElementById('questionText').textContent = q.q;
   
   const html = q.options.map((opt, idx) => `
-    <div class="option" onclick="selectAnswer(${idx})" id="opt-${idx}">
+    <div class="option" onclick="selectAnswer(${idx})" id="opt-${idx}" ${selectedAnswer !== null ? 'disabled' : ''}>
       ${String.fromCharCode(65 + idx)}) ${opt}
     </div>
   `).join('');
@@ -788,7 +847,11 @@ function selectAnswer(idx) {
   if (selectedAnswer !== null) return;
   
   selectedAnswer = idx;
-  const q = questions[currentQuestion];
+  
+  // Get shuffled questions
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  const questionsToUse = gameData.shuffledQuestions || questions;
+  const q = questionsToUse[currentQuestion]; // ✅ Use shuffled!
   
   document.getElementById(`opt-${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
   
@@ -798,7 +861,6 @@ function selectAnswer(idx) {
   }
 
   // Save answer to game data
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
   if (!gameData.answers) gameData.answers = {};
   gameData.answers[playerName] = idx;
   localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
@@ -933,13 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('gameCode').value = codeParam;
   }
 });
-  function shuffleQuestions(arry) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]]; // Swaps the item 
-    }
-    return array;
-  }
+
 </script>
 
 </body>
