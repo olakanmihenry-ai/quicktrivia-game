@@ -490,6 +490,10 @@ body {
 
     <!-- WAITING SCREEN -->
     <div id="waitingScreen" class="waiting-screen hidden">
+      <div class="connection-status waiting" id="connectionStatus">
+        <span class="loading"></span> Syncing with other players...
+      </div>
+      
       <h2>Waiting for Game to Start...</h2>
       
       <div class="room-code">
@@ -499,7 +503,7 @@ body {
       </div>
 
       <div class="players-list">
-        <h3>Players Joined</h3>
+          <h3>Players Joined (<span id="playerCount">0</span>)</h3>
         <div id="playersList"></div>
       </div>
 
@@ -507,12 +511,16 @@ body {
       <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
 
       <div class="info-box">
-        Share the code above with your friends. The host can start the game once everyone joins!
+        🔄 Players will see each other in real-time. Host can start when ready!
       </div>
     </div>
 
     <!-- QUESTION SCREEN -->
     <div id="questionScreen" class="question-screen hidden">
+      <div class="connection-status connected" id="questionStatus">
+        ✅ Playing
+      </div>
+      
       <div class="question-number" id="questionNumber">Question 1 of 10</div>
       <div class="question-text" id="questionText">Loading question...</div>
 
@@ -635,11 +643,22 @@ function joinGame() {
   gameCode = code;
   isHost = false;
   
-  if (!players[code]) players[code] = {};
-  players[code][name] = true;
-  scores[name] = 0;
+  // Check if game exists
+  const gameData = JSON.parse(localStorage.getItem(`game_${code}`));
+  if (!gameData) {
+    alert('❌ Game code not found. Ask host for the correct code!');
+    return;
+  }
+
+  // Add player to game
+  if (!gameData.players.includes(name)) {
+    gameData.players.push(name);
+    gameData.scores[name] = 0;
+  }
+  localStorage.setItem(`game_${code}`, JSON.stringify(gameData));
 
   showWaitingScreen();
+  startSync();
 }
 
 // SHOW WAITING SCREEN
@@ -649,21 +668,63 @@ function showWaitingScreen() {
   document.getElementById('displayCode').textContent = gameCode;
   updatePlayersList();
   gameState = 'waiting';
+  updateWaitingScreen();
 }
 
-// UPDATE PLAYERS LIST
-function updatePlayersList() {
-  const playerList = Object.keys(players[gameCode] || {});
+// START SYNC (Real-time updates)
+  function startSync() {
+    updateWaitingScreen();
+
+    syncInterval = setInterval(() => {
+      if (gameState === 'waiting') {
+        updateWaitingScreen();
+      } else if (gameState === 'playing') {
+        const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+        if (gameData && gameData.gameStarted === false) {
+           //Game was stopped
+        }
+      }
+    }, 500); // Update every 500ms
+  }
+
+// UPDATE WAITING SCREEN
+function updateWaitingScreen() {
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  
+  if (!gameData) return;
+
+  // Update players list
+  const playerList = gameData.players || [];
   const html = playerList.map(p => `
     <div class="player-item">
       <div class="player-avatar">${p.charAt(0).toUpperCase()}</div>
       <div class="player-name">${p}</div>
       <div class="player-status">
-        <span class="loading"></span> Ready
+        ${gameData.host === p ? '<span class="role-badge">HOST</span>' : '<span class="status-badge">Ready</span>'}
       </div>
     </div>
   `).join('');
+  
   document.getElementById('playersList').innerHTML = html;
+  document.getElementById('playerCount').textContent = playerList.length;
+
+  // Show start button only for host
+  if (isHost) {
+    document.getElementById('startBtn').style.display = 'block';
+  } else {
+    document.getElementById('startBtn').style.display = 'none';
+  }
+
+  // Update connection status
+  if (playerList.length > 1) {
+    document.getElementById('connectionStatus').textContent = `✅ ${playerList.length} players connected`;
+    document.getElementById('connectionStatus').className = 'connection-status connected';
+  }
+
+  // Check if game should start (for non-hosts)
+  if (gameData.gameStarted && gameState === 'waiting') {
+    startGameFromSync();
+  }
 }
 
 // SHOW START BUTTON
@@ -673,20 +734,24 @@ function showStartButton() {
   }
 }
 
-// COPY CODE
-function copyCode() {
-  navigator.clipboard.writeText(gameCode);
-  const btn = document.getElementById('copyBtn');
-  btn.textContent = '✅ Copied!';
-  btn.classList.add('copied');
-  setTimeout(() => {
-    btn.textContent = 'Copy Code';
-    btn.classList.remove('copied');
-  }, 2000);
-}
+
 
 // START GAME
 function startGame() {
+  if (!isHost) return;
+
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  gameData.gameStarted = true;
+  gameData.currentQuestion = 0;
+  gameData.answers = {};
+  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
+
+  startGameFromSync();
+}
+
+// START GAME FROM SYNC (Both host and players)
+function startGameFromSync() {
+  clearInterval(syncInterval);
   document.getElementById('waitingScreen').classList.add('hidden');
   document.getElementById('questionScreen').classList.remove('hidden');
   gameState = 'playing';
@@ -729,8 +794,14 @@ function selectAnswer(idx) {
   
   if (idx === q.correct) {
     answeredCorrect++;
-    scores[playerName]++;
+    scores[playerName] = (scores[playerName] || 0) + 1;
   }
+
+  // Save answer to game data
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  if (!gameData.answers) gameData.answers = {};
+  gameData.answers[playerName] = idx;
+  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
 
   clearInterval(timerInterval);
   setTimeout(() => {
@@ -765,12 +836,18 @@ function startTimer() {
 // SHOW RESULTS
 function showResults() {
   clearInterval(timerInterval);
+  clearInterval(syncInterval);
+  
   document.getElementById('questionScreen').classList.add('hidden');
   document.getElementById('resultsScreen').classList.remove('hidden');
   gameState = 'results';
 
+  // Get final scores from localStorage
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  const finalScores = gameData.scores || scores;
+  
   // Sort scores
-  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(finalScores).sort((a, b) => b[1] - a[1]);
   
   const html = sorted.map((entry, idx) => {
     const medals = ['🥇', '🥈', '🥉'];
@@ -785,33 +862,68 @@ function showResults() {
   }).join('');
 
   document.getElementById('leaderboardContent').innerHTML = html;
-  document.getElementById('yourScore').textContent = scores[playerName];
+  document.getElementById('yourScore').textContent = scores[playerName] || 0;
   document.getElementById('correctCount').textContent = answeredCorrect;
 }
 
 // PLAY AGAIN
 function playAgain() {
   if (isHost) {
+    // Reset game
+    const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+    gameData.gameStarted = false;
+    gameData.currentQuestion = 0;
+    gameData.answers = {};
+    localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
+
+    // Reset player scores
+    answeredCorrect = 0;
+    scores[playerName] = 0;
     currentQuestion = 0;
     selectedAnswer = null;
-    answeredCorrect = 0;
+
     document.getElementById('resultsScreen').classList.add('hidden');
-    document.getElementById('questionScreen').classList.remove('hidden');
-    gameState = 'playing';
-    showQuestion();
+    document.getElementById('waitingScreen').classList.remove('hidden');
+    gameState = 'waiting';
+    
+    startSync();
   } else {
-    alert('Only the host can start a new game');
+    alert('⏳ Waiting for host to start new game...');
   }
 }
 
 // LEAVE GAME
 function leaveGame() {
-  if (players[gameCode]) {
-    delete players[gameCode][playerName];
+  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+  
+  if (gameData && gameData.players) {
+    gameData.players = gameData.players.filter(p => p !== playerName);
+    
+    if (gameData.players.length === 0) {
+      // Delete game if no players left
+      localStorage.removeItem(`game_${gameCode}`);
+    } else {
+      localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
+    }
   }
+
+  clearInterval(syncInterval);
+  clearInterval(timerInterval);
   location.reload();
 }
 
+// COPY CODE
+function copyCode() {
+  navigator.clipboard.writeText(gameCode);
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✅ Copied!';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = 'Copy Code';
+    btn.classList.remove('copied');
+  }, 2000);
+}
+  
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
   // Add URL game code support (optional: https://yoursite.com?code=XXXX)
