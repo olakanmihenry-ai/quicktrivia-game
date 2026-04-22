@@ -668,11 +668,21 @@ function createGame() {
   playerName = name;
   gameCode = generateCode();
   isHost = true;
-  players[gameCode] = { [name]: true };
-  scores[name] = 0;
-
+  
+  // Save to localStorage
+  const gameData = {
+    code: gameCode,
+    host: playerName,
+    players: [playerName],
+    gameStarted: false,
+    currentQuestion: 0,
+    scores: { [playerName]: 0 },
+    answers: {}
+  };
+  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
+  
   showWaitingScreen();
-  showStartButton();
+  startSync();
 }
 
 // JOIN GAME
@@ -784,8 +794,6 @@ function showStartButton() {
     document.getElementById('startBtn').style.display = 'block';
   }
 }
-
-
 
 // START GAME
 function startGame() {
@@ -995,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('gameCode').value = codeParam;
   }
 });
-
 </script>
 
 </body>
