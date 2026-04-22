@@ -18,6 +18,7 @@
   --bg-color: #f4f7f6;
   --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -134,6 +135,11 @@ body {
   background: #e0e0e0;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* WAITING SCREEN */
 .waiting-screen {
   text-align: center;
@@ -190,6 +196,12 @@ body {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid #e0e0e0;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .player-item:last-child {
@@ -234,14 +246,20 @@ body {
   50% { opacity: 0.3; }
 }
 
+.status-badge {
+  display: inline-block;
+  background: #4caf50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
 /* QUESTION SCREEN */
 .question-screen {
   animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .question-number {
@@ -300,6 +318,10 @@ body {
   border-color: #f44336;
   background: #fdf1f0;
   color: #f44336;
+}
+
+.option:disabled {
+  cursor: not-allowed;
 }
 
 .timer {
@@ -504,20 +526,21 @@ body {
       <button class="btn btn-secondary" onclick="createGame()">Create New Game</button>
 
       <div class="info-box">
-        🎯 <strong>How it works:</strong> Create a game and share the code with friends. Players answer questions anonymously. Highest score wins! 🏆
+        🎯 <strong>How it works:</strong> Create a game and share the code with friends. Players answer questions. Highest score wins! 🏆
       </div>
     </div>
-                <div class="mt-6 text-center text-sm text-gray-500">
+    <div class="mt-6 text-center text-sm text-gray-500">
             <p>© 2026 Ghost. All rights reserved.</p>
         </div>
     </div>
+
 
     <!-- WAITING SCREEN -->
     <div id="waitingScreen" class="waiting-screen hidden">
       <div class="connection-status waiting" id="connectionStatus">
         <span class="loading"></span> Syncing with other players...
       </div>
-      
+
       <h2>Waiting for Game to Start...</h2>
       
       <div class="room-code">
@@ -527,7 +550,7 @@ body {
       </div>
 
       <div class="players-list">
-          <h3>Players Joined (<span id="playerCount">0</span>)</h3>
+        <h3>Players Joined (<span id="playerCount">0</span>)</h3>
         <div id="playersList"></div>
       </div>
 
@@ -586,7 +609,6 @@ body {
 
 <script>
 // GAME DATA
-
 // Fisher-Yates Shuffle Algorithm
 function shuffleArray(array) {
   const shuffled = [...array]; // Make a copy so we don't change original
@@ -644,13 +666,14 @@ let gameState = 'join'; // join, waiting, playing, results
 let gameCode = '';
 let playerName = '';
 let isHost = false;
-let players = {1: []}; // { gameCode: [player1, player2, ...]}
+let players = {1: []}; // { gameCode: [player1, player2, ...] }
 let scores = {};
 let currentQuestion = 0;
 let selectedAnswer = null;
 let answeredCorrect = 0;
 let timeLeft = 10;
 let timerInterval = null;
+let syncInterval = null;
 
 // GENERATE GAME CODE
 function generateCode() {
@@ -703,7 +726,7 @@ function joinGame() {
   playerName = name;
   gameCode = code;
   isHost = false;
-  
+
   // Check if game exists
   const gameData = JSON.parse(localStorage.getItem(`game_${code}`));
   if (!gameData) {
@@ -727,26 +750,25 @@ function showWaitingScreen() {
   document.getElementById('joinScreen').classList.add('hidden');
   document.getElementById('waitingScreen').classList.remove('hidden');
   document.getElementById('displayCode').textContent = gameCode;
-  updatePlayersList();
   gameState = 'waiting';
   updateWaitingScreen();
 }
 
 // START SYNC (Real-time updates)
-  function startSync() {
-    updateWaitingScreen();
-
-    syncInterval = setInterval(() => {
-      if (gameState === 'waiting') {
-        updateWaitingScreen();
-      } else if (gameState === 'playing') {
-        const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-        if (gameData && gameData.gameStarted === false) {
-           //Game was stopped
-        }
+function startSync() {
+  updateWaitingScreen();
+  
+  syncInterval = setInterval(() => {
+    if (gameState === 'waiting') {
+      updateWaitingScreen();
+    } else if (gameState === 'playing') {
+      const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
+      if (gameData && gameData.gameStarted === false) {
+        // Game was stopped
       }
-    }, 500); // Update every 500ms
-  }
+    }
+  }, 500); // Update every 500ms
+}
 
 // UPDATE WAITING SCREEN
 function updateWaitingScreen() {
@@ -785,13 +807,6 @@ function updateWaitingScreen() {
   // Check if game should start (for non-hosts)
   if (gameData.gameStarted && gameState === 'waiting') {
     startGameFromSync();
-  }
-}
-
-// SHOW START BUTTON
-function showStartButton() {
-  if (isHost) {
-    document.getElementById('startBtn').style.display = 'block';
   }
 }
 
@@ -993,10 +1008,9 @@ function copyCode() {
     btn.classList.remove('copied');
   }, 2000);
 }
-  
+
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
-  // Add URL game code support (optional: https://yoursite.com?code=XXXX)
   const params = new URLSearchParams(window.location.search);
   const codeParam = params.get('code');
   if (codeParam) {
