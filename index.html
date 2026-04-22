@@ -11,6 +11,12 @@
   box-sizing: border-box;
 }
 
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --correct-color: #4caf50;
+  --wrong-color: #f44336;
+  --bg-color: #f4f7f6;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -811,6 +817,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('gameCode').value = codeParam;
   }
 });
+  function shuffleQuestions(arry) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]; // Swaps the item 
+    }
+    return array;
+  }
 </script>
 
 </body>
