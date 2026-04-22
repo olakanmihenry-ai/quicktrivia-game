@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickTrivia - Multiplayer Game</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 600px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 32px;
+  margin-bottom: 5px;
+}
+
+.header p {
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+.content {
+  padding: 30px 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* JOIN SCREEN */
+.join-screen {
+  text-align: center;
+}
+
+.join-screen h2 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+  margin-top: 10px;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+/* WAITING SCREEN */
+.waiting-screen {
+  text-align: center;
+}
+
+.waiting-screen h2 {
+  font-size: 20px;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.room-code {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.room-code-label {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.room-code-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #667eea;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 5px;
+}
+
+.players-list {
+  background: #f9f9f9;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.players-list h3 {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.player-status {
+  margin-left: auto;
+  font-size: 12px;
+  color: #999;
+}
+
+.loading {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #667eea;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* QUESTION SCREEN */
+.question-screen {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.question-number {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.question-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 30px;
+  line-height: 1.4;
+}
+
+.options {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.option {
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+}
+
+.option:hover {
+  border-color: #667eea;
+  background: #f9f9ff;
+  transform: translateX(5px);
+}
+
+.option.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+  color: #667eea;
+}
+
+.option.correct {
+  border-color: #4caf50;
+  background: #f1f8f4;
+  color: #4caf50;
+}
+
+.option.wrong {
+  border-color: #f44336;
+  background: #fdf1f0;
+  color: #f44336;
+}
+
+.timer {
+  font-size: 14px;
+  color: #999;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.1s linear;
+}
+
+/* RESULTS SCREEN */
+.results-screen {
+  text-align: center;
+}
+
+.results-screen h2 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.leaderboard {
+  background: #f9f9f9;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.leaderboard-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.leaderboard-item:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-rank {
+  font-weight: 700;
+  color: #667eea;
+  min-width: 30px;
+}
+
+.leaderboard-name {
+  flex: 1;
+  margin-left: 10px;
+  font-weight: 600;
+  color: #333;
+}
+
+.leaderboard-score {
+  font-weight: 700;
+  color: #667eea;
+}
+
+.medal {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.stats {
+  background: #f9f9f9;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  text-align: center;
+}
+
+.stat-item h4 {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.stat-item p {
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.hidden {
+  display: none;
+}
+
+.copy-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.copy-btn:hover {
+  opacity: 0.9;
+}
+
+.copy-btn.copied {
+  background: #4caf50;
+}
+
+.info-box {
+  background: #e3f2fd;
+  border-left: 4px solid #667eea;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+  text-align: left;
+  font-size: 13px;
+  color: #1565c0;
+  line-height: 1.6;
+}
+
+.warning {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+  color: #e65100;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🎮 QuickTrivia</h1>
+    <p>Multiplayer Trivia Game</p>
+  </div>
+
+  <div class="content">
+    <!-- JOIN SCREEN -->
+    <div id="joinScreen" class="join-screen">
+      <h2>Join a Game</h2>
+      
+      <div class="input-group">
+        <label for="playerName">Your Name (Anonymous in Game)</label>
+        <input type="text" id="playerName" placeholder="Enter your name..." maxlength="20">
+      </div>
+
+      <div class="input-group">
+        <label for="gameCode">Game Code</label>
+        <input type="text" id="gameCode" placeholder="Ask host for code..." maxlength="6" style="text-transform: uppercase;">
+      </div>
+
+      <button class="btn btn-primary" onclick="joinGame()">Join Game</button>
+      <button class="btn btn-secondary" onclick="createGame()">Create New Game</button>
+
+      <div class="info-box">
+        🎯 <strong>How it works:</strong> Create a game and share the code with friends. Players answer questions anonymously. Highest score wins! 🏆
+      </div>
+    </div>
+
+    <!-- WAITING SCREEN -->
+    <div id="waitingScreen" class="waiting-screen hidden">
+      <h2>Waiting for Game to Start...</h2>
+      
+      <div class="room-code">
+        <div class="room-code-label">Game Code</div>
+        <div class="room-code-value" id="displayCode">XXXX</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Code</button>
+      </div>
+
+      <div class="players-list">
+        <h3>Players Joined</h3>
+        <div id="playersList"></div>
+      </div>
+
+      <button class="btn btn-primary" id="startBtn" onclick="startGame()" style="display:none;">Start Game</button>
+      <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
+
+      <div class="info-box">
+        Share the code above with your friends. The host can start the game once everyone joins!
+      </div>
+    </div>
+
+    <!-- QUESTION SCREEN -->
+    <div id="questionScreen" class="question-screen hidden">
+      <div class="question-number" id="questionNumber">Question 1 of 10</div>
+      <div class="question-text" id="questionText">Loading question...</div>
+
+      <div class="options" id="optionsContainer"></div>
+
+      <div class="timer">
+        <span id="timerText">10s remaining</span>
+        <div class="timer-bar">
+          <div class="timer-fill" id="timerFill" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS SCREEN -->
+    <div id="resultsScreen" class="results-screen hidden">
+      <h2>🏆 Game Over!</h2>
+
+      <div class="leaderboard">
+        <div class="leaderboard-title">Final Scores</div>
+        <div id="leaderboardContent"></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-item">
+          <h4>Your Score</h4>
+          <p id="yourScore">0</p>
+        </div>
+        <div class="stat-item">
+          <h4>Correct Answers</h4>
+          <p id="correctCount">0</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="playAgain()">Play Again</button>
+      <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// GAME DATA
+const questions = [
+  { q: "What is the capital of France?", options: ["London", "Paris", "Berlin", "Madrid"], correct: 1 },
+  { q: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], correct: 1 },
+  { q: "Who painted the Mona Lisa?", options: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"], correct: 2 },
+  { q: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
+  { q: "In what year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
+  { q: "What is the smallest country in the world?", options: ["Monaco", "San Marino", "Vatican City", "Luxembourg"], correct: 2 },
+  { q: "Who wrote Romeo and Juliet?", options: ["Jane Austen", "Shakespeare", "Dickens", "Bronte"], correct: 1 },
+  { q: "What is the hardest natural substance?", options: ["Gold", "Iron", "Diamond", "Platinum"], correct: 2 },
+  { q: "Which country has the most population?", options: ["India", "China", "USA", "Indonesia"], correct: 0 },
+  { q: "What is the speed of light?", options: ["299,792 km/s", "199,792 km/s", "399,792 km/s", "99,792 km/s"], correct: 0 },
+  { q: "Which city is the largest in Nigeria by population?", options: ["Abuja", "Lagos", "Kano", "Ibadan"], correct: 1 },
+  { q: "What is the name of the longest river in Nigeria?", options: ["Niger River", "Benue River", "Kaduna River", "Cross River"], correct: 0 }, 
+  { q: "Which Nigerian author won the Nobel Prize in Literature?", options: ["Chinua Achebe", "Wole Soyinka", "Chimamanda Ngozi Adichie", "Ben Okri"], correct: 1 },
+  { q: "What is the process by which green plants make their own food?", options: ["Respiration", "Transpiration", "Photosynthesis", "Digestion"], correct: 2 },
+  { q: "Which form of energy is associated with an object's motion?", options: ["Potential energy", "Kinetic energy", "Thermal energy", "Chemical energy"], correct: 1 },
+  { q: "What is the pH value of pure water at room temperature?", options: ["1", "5", "7", "14"], correct: 2 },
+  { q: "What term describes a market where share prices are rising, encouraging buying?", options: ["Bear market", "Stagnant market", "Bull market", "Recession"], correct: 2 },
+  { q: "In journalism, what is the 'Inverted Pyramid' structure used for?", options: ["Writing headlines", "Organizing news stories by importance", "Designing newspaper layouts", "Interviewing sources"], correct: 1 },
+  { q: "Which is the longest river in the world?", options: ["Amazon", "Nile", "Mississippi", "Yangtze"], correct: 1 },
+  { q: "What is the chemical symbol for gold?", options: ["Au", "Ag", "Gd", "Go"], correct: 0 },
+  { q: "Which part of the human brain is primarily responsible for balance and coordination?", options: ["Cerebrum", "Brainstem", "Cerebellum", "Hypothalamus"], correct: 2 },
+  { q: "What does 'Inflation' refer to in an economy?", options: ["Increase in the value of money", "General increase in prices", "Decrease in the total population", "Increase in gold reserves"], correct: 1 },
+  { q: "What is a 'Byline' in a newspaper article?", options: ["The main headline", "A line giving the name of the writer", "The summary at the end", "The date of publication"], correct: 1 },
+];
+
+// STATE
+let gameState = 'join'; // join, waiting, playing, results
+let gameCode = '';
+let playerName = '';
+let isHost = false;
+let players = {};
+let scores = {};
+let currentQuestion = 0;
+let selectedAnswer = null;
+let answeredCorrect = 0;
+let timeLeft = 10;
+let timerInterval = null;
+
+// GENERATE GAME CODE
+function generateCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// CREATE GAME
+function createGame() {
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) {
+    alert('Please enter your name');
+    return;
+  }
+
+  playerName = name;
+  gameCode = generateCode();
+  isHost = true;
+  players[gameCode] = { [name]: true };
+  scores[name] = 0;
+
+  showWaitingScreen();
+  showStartButton();
+}
+
+// JOIN GAME
+function joinGame() {
+  const name = document.getElementById('playerName').value.trim();
+  const code = document.getElementById('gameCode').value.trim().toUpperCase();
+
+  if (!name || !code) {
+    alert('Please enter name and game code');
+    return;
+  }
+
+  if (code.length !== 6) {
+    alert('Invalid game code');
+    return;
+  }
+
+  playerName = name;
+  gameCode = code;
+  isHost = false;
+  
+  if (!players[code]) players[code] = {};
+  players[code][name] = true;
+  scores[name] = 0;
+
+  showWaitingScreen();
+}
+
+// SHOW WAITING SCREEN
+function showWaitingScreen() {
+  document.getElementById('joinScreen').classList.add('hidden');
+  document.getElementById('waitingScreen').classList.remove('hidden');
+  document.getElementById('displayCode').textContent = gameCode;
+  updatePlayersList();
+  gameState = 'waiting';
+}
+
+// UPDATE PLAYERS LIST
+function updatePlayersList() {
+  const playerList = Object.keys(players[gameCode] || {});
+  const html = playerList.map(p => `
+    <div class="player-item">
+      <div class="player-avatar">${p.charAt(0).toUpperCase()}</div>
+      <div class="player-name">${p}</div>
+      <div class="player-status">
+        <span class="loading"></span> Ready
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('playersList').innerHTML = html;
+}
+
+// SHOW START BUTTON
+function showStartButton() {
+  if (isHost) {
+    document.getElementById('startBtn').style.display = 'block';
+  }
+}
+
+// COPY CODE
+function copyCode() {
+  navigator.clipboard.writeText(gameCode);
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✅ Copied!';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = 'Copy Code';
+    btn.classList.remove('copied');
+  }, 2000);
+}
+
+// START GAME
+function startGame() {
+  document.getElementById('waitingScreen').classList.add('hidden');
+  document.getElementById('questionScreen').classList.remove('hidden');
+  gameState = 'playing';
+  currentQuestion = 0;
+  selectedAnswer = null;
+  showQuestion();
+}
+
+// SHOW QUESTION
+function showQuestion() {
+  if (currentQuestion >= questions.length) {
+    showResults();
+    return;
+  }
+
+  const q = questions[currentQuestion];
+  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+  document.getElementById('questionText').textContent = q.q;
+  
+  const html = q.options.map((opt, idx) => `
+    <div class="option" onclick="selectAnswer(${idx})" id="opt-${idx}">
+      ${String.fromCharCode(65 + idx)}) ${opt}
+    </div>
+  `).join('');
+  document.getElementById('optionsContainer').innerHTML = html;
+
+  selectedAnswer = null;
+  timeLeft = 10;
+  startTimer();
+}
+
+// SELECT ANSWER
+function selectAnswer(idx) {
+  if (selectedAnswer !== null) return;
+  
+  selectedAnswer = idx;
+  const q = questions[currentQuestion];
+  
+  document.getElementById(`opt-${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
+  
+  if (idx === q.correct) {
+    answeredCorrect++;
+    scores[playerName]++;
+  }
+
+  clearInterval(timerInterval);
+  setTimeout(() => {
+    currentQuestion++;
+    showQuestion();
+  }, 1500);
+}
+
+// TIMER
+function startTimer() {
+  document.getElementById('timerText').textContent = `${timeLeft}s remaining`;
+  document.getElementById('timerFill').style.width = '100%';
+
+  let elapsed = 0;
+  timerInterval = setInterval(() => {
+    elapsed++;
+    timeLeft--;
+    const percent = (1 - (elapsed / 10)) * 100;
+    document.getElementById('timerFill').style.width = percent + '%';
+    document.getElementById('timerText').textContent = `${Math.max(0, timeLeft)}s remaining`;
+
+    if (elapsed >= 10) {
+      clearInterval(timerInterval);
+      if (selectedAnswer === null) {
+        currentQuestion++;
+        showQuestion();
+      }
+    }
+  }, 1000);
+}
+
+// SHOW RESULTS
+function showResults() {
+  clearInterval(timerInterval);
+  document.getElementById('questionScreen').classList.add('hidden');
+  document.getElementById('resultsScreen').classList.remove('hidden');
+  gameState = 'results';
+
+  // Sort scores
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  
+  const html = sorted.map((entry, idx) => {
+    const medals = ['🥇', '🥈', '🥉'];
+    return `
+      <div class="leaderboard-item">
+        <span class="medal">${medals[idx] || '  '}</span>
+        <span class="leaderboard-rank">#${idx + 1}</span>
+        <span class="leaderboard-name">${entry[0]}</span>
+        <span class="leaderboard-score">${entry[1]} pts</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('leaderboardContent').innerHTML = html;
+  document.getElementById('yourScore').textContent = scores[playerName];
+  document.getElementById('correctCount').textContent = answeredCorrect;
+}
+
+// PLAY AGAIN
+function playAgain() {
+  if (isHost) {
+    currentQuestion = 0;
+    selectedAnswer = null;
+    answeredCorrect = 0;
+    document.getElementById('resultsScreen').classList.add('hidden');
+    document.getElementById('questionScreen').classList.remove('hidden');
+    gameState = 'playing';
+    showQuestion();
+  } else {
+    alert('Only the host can start a new game');
+  }
+}
+
+// LEAVE GAME
+function leaveGame() {
+  if (players[gameCode]) {
+    delete players[gameCode][playerName];
+  }
+  location.reload();
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  // Add URL game code support (optional: https://yoursite.com?code=XXXX)
+  const params = new URLSearchParams(window.location.search);
+  const codeParam = params.get('code');
+  if (codeParam) {
+    document.getElementById('gameCode').value = codeParam;
+  }
+});
+</script>
+
+</body>
+</html>
