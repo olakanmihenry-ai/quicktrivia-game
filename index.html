@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ghost👻Trivia - Multiplayer Game</title>
+<title>GhostTrivia - Multiplayer Game</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
 <style>
 * {
   margin: 0;
@@ -12,30 +17,38 @@
 }
 
 :root {
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --correct-color: #4caf50;
-  --wrong-color: #f44336;
-  --bg-color: #f4f7f6;
-  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --primary-gradient: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
 }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* This is the secret sauce: a super-wide background that moves */
+  background: var(--primary-gradient);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+  
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  transition: background 0.5s ease; /* For smooth feedback changes */
+}
+
+/* The logic that moves the colors */
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .container {
-  background: white;
+  background: rgba(255, 255, 255, 0.9); /* Slightly transparent */
+  backdrop-filter: blur(10px); /* Blurs the moving background behind it */
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  max-width: 600px;
-  width: 100%;
-  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  /* rest of your container styles */
 }
 
 .header {
@@ -121,8 +134,9 @@ body {
   box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
 }
 
-.btn-primary:active {
-  transform: translateY(0);
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
@@ -133,11 +147,6 @@ body {
 
 .btn-secondary:hover {
   background: #e0e0e0;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* WAITING SCREEN */
@@ -172,6 +181,26 @@ body {
   color: #667eea;
   font-family: 'Courier New', monospace;
   letter-spacing: 5px;
+}
+
+.copy-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.copy-btn:hover {
+  opacity: 0.9;
+}
+
+.copy-btn.copied {
+  background: #4caf50;
 }
 
 .players-list {
@@ -224,12 +253,42 @@ body {
 .player-name {
   font-weight: 600;
   color: #333;
+  flex: 1;
 }
 
-.player-status {
-  margin-left: auto;
-  font-size: 12px;
-  color: #999;
+.role-badge {
+  background: #667eea;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.status-badge {
+  background: #4caf50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.connection-status {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.connection-status.error {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
 .loading {
@@ -239,22 +298,12 @@ body {
   border-radius: 50%;
   background: #667eea;
   animation: pulse 1.5s infinite;
+  margin-right: 6px;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
-}
-
-.status-badge {
-  display: inline-block;
-  background: #4caf50;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  margin-left: 8px;
 }
 
 /* QUESTION SCREEN */
@@ -300,12 +349,6 @@ body {
   border-color: #667eea;
   background: #f9f9ff;
   transform: translateX(5px);
-}
-
-.option.selected {
-  border-color: #667eea;
-  background: #f0f4ff;
-  color: #667eea;
 }
 
 .option.correct {
@@ -386,6 +429,11 @@ body {
   border-bottom: none;
 }
 
+.medal {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
 .leaderboard-rank {
   font-weight: 700;
   color: #667eea;
@@ -402,11 +450,6 @@ body {
 .leaderboard-score {
   font-weight: 700;
   color: #667eea;
-}
-
-.medal {
-  font-size: 20px;
-  margin-right: 10px;
 }
 
 .stats {
@@ -437,26 +480,6 @@ body {
   display: none;
 }
 
-.copy-btn {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 12px;
-  margin-top: 10px;
-}
-
-.copy-btn:hover {
-  opacity: 0.9;
-}
-
-.copy-btn.copied {
-  background: #4caf50;
-}
-
 .info-box {
   background: #e3f2fd;
   border-left: 4px solid #667eea;
@@ -468,49 +491,20 @@ body {
   color: #1565c0;
   line-height: 1.6;
 }
-
-.connection-status {
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-
-.connection-status.connected {
-  background: #d4edda;
-  color: #155724;
-}
-
-.connection-status.waiting {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.role-badge {
-  display: inline-block;
-  background: #667eea;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  margin-left: 8px;
-}
 </style>
 </head>
 <body>
 
 <div class="container">
   <div class="header">
-    <h1>🎮 Ghost👻Trivia</h1>
-    <p>Multiplayer Trivia Game</p>
+    <h1>👻 GhostTrivia</h1>
+    <p>Real-Time Multiplayer Trivia 🎲</p>
   </div>
 
   <div class="content">
     <!-- JOIN SCREEN -->
     <div id="joinScreen" class="join-screen">
-      <h2>Join a Game</h2>
+      <h2>Join or Create Game</h2>
       
       <div class="input-group">
         <label for="playerName">Your Name</label>
@@ -518,35 +512,30 @@ body {
       </div>
 
       <div class="input-group">
-        <label for="gameCode">Game Code</label>
-        <input type="text" id="gameCode" placeholder="Ask host for code..." maxlength="6" style="text-transform: uppercase;">
+        <label for="gameCode">Game Code (Optional)</label>
+        <input type="text" id="gameCode" placeholder="Leave empty to create new game..." maxlength="6" style="text-transform: uppercase;">
       </div>
 
-      <button class="btn btn-primary" onclick="joinGame()">Join Game</button>
-      <button class="btn btn-secondary" onclick="createGame()">Create New Game</button>
+      <button class="btn btn-primary" id="joinBtn" onclick="joinGame()">Join Game</button>
+      <button class="btn btn-secondary" onclick="createNewGame()">Create New Game</button>
 
       <div class="info-box">
-        🎯 <strong>How it works:</strong> Create a game and share the code with friends. Players answer questions. Highest score wins! 🏆
+        🔥 <strong>Connected to Firebase!</strong> Players from anywhere can join in real-time!
       </div>
     </div>
-    <div class="mt-6 text-center text-sm text-gray-500">
-            <p>© 2026 Ghost. All rights reserved.</p>
-        </div>
-    </div>
-
 
     <!-- WAITING SCREEN -->
     <div id="waitingScreen" class="waiting-screen hidden">
-      <div class="connection-status waiting" id="connectionStatus">
-        <span class="loading"></span> Syncing with other players...
+      <div class="connection-status" id="connectionStatus">
+        <span class="loading"></span> ✅ Connected to Firebase
       </div>
 
-      <h2>Waiting for Game to Start...</h2>
+      <h2>Game Lobby</h2>
       
       <div class="room-code">
-        <div class="room-code-label">Game Code</div>
+        <div class="room-code-label">Share This Code</div>
         <div class="room-code-value" id="displayCode">XXXX</div>
-        <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Code</button>
+        <button class="copy-btn" id="copyBtn" onclick="copyCode()">📋 Copy Code</button>
       </div>
 
       <div class="players-list">
@@ -554,18 +543,18 @@ body {
         <div id="playersList"></div>
       </div>
 
-      <button class="btn btn-primary" id="startBtn" onclick="startGame()" style="display:none;">Start Game</button>
+      <button class="btn btn-primary" id="startBtn" onclick="startGame()" style="display:none;">🎲 Start Game</button>
       <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
 
       <div class="info-box">
-        🔄 Players will see each other in real-time. Host can start when ready!
+        👉 Share the code above! Friends can join from any device in real-time!
       </div>
     </div>
 
     <!-- QUESTION SCREEN -->
     <div id="questionScreen" class="question-screen hidden">
-      <div class="connection-status connected" id="questionStatus">
-        ✅ Playing
+      <div class="connection-status">
+        ✅ Game In Progress
       </div>
       
       <div class="question-number" id="questionNumber">Question 1 of 10</div>
@@ -601,87 +590,112 @@ body {
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="playAgain()">Play Again</button>
+      <button class="btn btn-primary" onclick="playAgain()">Play Again 🎲</button>
       <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
     </div>
   </div>
 </div>
 
 <script>
+// ════════════════════════════════════
+// FIREBASE CONFIG
+// ════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDp1U4jnBgBu55HVIFp4CSSeYFYWdaGHBo",
+  authDomain: "ghosttrivia-39796.firebaseapp.com",
+  databaseURL: "https://ghosttrivia-39796-default-rtdb.firebaseio.com",
+  projectId: "ghosttrivia-39796",
+  storageBucket: "ghosttrivia-39796.appspot.com",
+  messagingSenderId: "58869402261",
+  appId: "1:58869402261:web:20d538bcd761debbdce99c",
+  measurementId: "G-KP02XK3EYT"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ════════════════════════════════════
 // GAME DATA
-// Fisher-Yates Shuffle Algorithm
-function shuffleArray(array) {
-  const shuffled = [...array]; // Make a copy so we don't change original
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
+// ════════════════════════════════════
 const questions = [
   { q: "Which is the only country in the world to have three official capital cities?", options: ["South Africa", "Nigeria", "Australia", "Bolivia"], correct: 0 },
   { q: "What is the largest desert in the world (including polar regions)?", options: ["Sahara", "Gobi", "Antarctica", "Kalahari"], correct: 2 },
   { q: "Mount Kilimanjaro, the highest mountain in Africa, is located in which country?", options: ["Kenya", "Tanzania", "Ethiopia", "Uganda"], correct: 1 },
   { q: "Which Nigerian state is known as the 'Gateway State'?", options: ["Lagos", "Ogun", "Kwara", "Edo"], correct: 1 },
   { q: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], correct: 2 },
+  { q: "Which country has the most natural lakes?", options: ["Canada", "Russia", "USA", "Brazil"], correct: 0 },
+  { q: "The Great Barrier Reef is located off the coast of which country?", options: ["Australia", "Indonesia", "Philippines", "Fiji"], correct: 0 },
+  { q: "Which river is the longest in the world?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], correct: 1 },
+  { q: "What is the smallest country in the world by land area?", options: ["Monaco", "Vatican City", "Nauru", "San Marino"], correct: 1 },
+  { q: "Which African country was formerly known as Abyssinia?", options: ["Ethiopia", "Sudan", "Somalia", "Kenya"], correct: 0 },
   { q: "What is the 'powerhouse' of the cell?", options: ["Nucleus", "Ribosome", "Mitochondria", "Vacuole"], correct: 2 },
   { q: "Which blood type is known as the universal donor?", options: ["A+", "B-", "AB+", "O-"], correct: 3 },
   { q: "What is the largest organ in the human body?", options: ["Heart", "Liver", "Skin", "Lungs"], correct: 2 },
-  { q: "Humans and chimpanzees share roughly what percentage of their DNA?", options: ["70%", "85%", "98%", "60%"], correct: 2 },
-  { q: "Which vitamin is primarily obtained from sunlight?", options: ["Vitamin A", "Vitamin C", "Vitamin D", "Vitamin B12"], correct: 2 },
+  { q: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], correct: 1 },
+  { q: "What is the chemical symbol for gold?", options: ["Au", "Ag", "Gd", "Go"], correct: 0 },
   { q: "Who developed the theory of General Relativity?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Stephen Hawking"], correct: 1 },
   { q: "What is the unit of electrical resistance?", options: ["Volt", "Ampere", "Watt", "Ohm"], correct: 3 },
   { q: "Which of these is a non-renewable source of energy?", options: ["Solar", "Wind", "Coal", "Hydroelectric"], correct: 2 },
-  { q: "What is the center of an atom called?", options: ["Electron", "Proton", "Nucleus", "Neutron"], correct: 2 },
-  { q: "Sound travels fastest through which of the following?", options: ["Air", "Water", "Steel", "Vacuum"], correct: 2 },
   { q: "What is the most abundant gas in Earth's atmosphere?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], correct: 2 },
   { q: "What is the chemical formula for common table salt?", options: ["H2O", "NaCl", "CO2", "KCl"], correct: 1 },
   { q: "Which element has the atomic number 1?", options: ["Helium", "Oxygen", "Hydrogen", "Carbon"], correct: 2 },
-  { q: "What is the common name for solid Carbon Dioxide?", options: ["Dry Ice", "Quicklime", "Baking Soda", "Quartz"], correct: 0 },
-  { q: "Which metal is liquid at room temperature?", options: ["Gold", "Silver", "Mercury", "Copper"], correct: 2 },
   { q: "What does GDP stand for?", options: ["Gross Domestic Product", "General Deposit Profit", "Global Development Plan", "Gross Daily Percentage"], correct: 0 },
   { q: "In the stock market, what does 'IPO' stand for?", options: ["Internal Profit Option", "Initial Public Offering", "International Payment Order", "Investment Portfolio Overhaul"], correct: 1 },
   { q: "Which organization is responsible for issuing the Naira in Nigeria?", options: ["EFCC", "CBN", "FIRS", "NNPC"], correct: 1 },
-  { q: "What is a 'Dividend'?", options: ["A type of debt", "A portion of company profit paid to shareholders", "The cost of a loan", "A tax on imports"], correct: 1 },
-  { q: "What is the main purpose of a 'Diversified' portfolio?", options: ["To maximize taxes", "To reduce risk by spreading investments", "To invest only in gold", "To hide money from the bank"], correct: 1 },
   { q: "What is the term for a sensationalized or exaggerated news headline?", options: ["Hard news", "Clickbait", "Feature story", "Editorial"], correct: 1 },
   { q: "What is 'Libel' in journalism?", options: ["Written defamation", "Spoken defamation", "A type of camera lens", "A secret source"], correct: 0 },
   { q: "Which prize is considered the highest honor in American journalism?", options: ["Oscar", "Grammy", "Pulitzer Prize", "Nobel Prize"], correct: 2 },
-  { q: "What is an 'Editorial'?", options: ["A factual weather report", "An article expressing the editor's opinion", "A list of advertisements", "A sports summary"], correct: 1 },
-  { q: "What is 'Off the Record' information?", options: ["Information that can be quoted directly", "Information that cannot be published or attributed", "A story that is very popular", "A recording of a live event"], correct: 1 },
   { q: "What is the square root of 144?", options: ["10", "12", "14", "16"], correct: 1 },
   { q: "What is the value of Pi (π) to two decimal places?", options: ["3.12", "3.16", "3.14", "3.18"], correct: 2 },
   { q: "If a triangle has angles of 90° and 45°, what is the third angle?", options: ["45°", "55°", "90°", "35°"], correct: 0 },
   { q: "What is 7 multiplied by 8?", options: ["54", "56", "62", "64"], correct: 1 },
   { q: "What is the Roman numeral for 50?", options: ["V", "X", "L", "C"], correct: 2 },
-  { q: "Which of these is a prime number?", options: ["9", "15", "17", "21"], correct: 2 },
-  { q: "What is the result of 2 + 2 × 2?", options: ["8", "6", "4", "10"], correct: 1 }, // Note: Follows BODMAS/PEMDAS
-  { q: "How many sides does a Heptagon have?", options: ["6", "7", "8", "9"], correct: 1 },
-  { q: "What is 15% of 200?", options: ["20", "25", "30", "35"], correct: 2 },
-  { q: "In algebra, what is the term for a number that does not change?", options: ["Variable", "Constant", "Coefficient", "Exponent"], correct: 1 }
+  { q: "Which of these is a prime number?", options: ["9", "15", "17", "21"], correct: 2 }
 ];
 
+// 🎲 SHUFFLE FUNCTION
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// ════════════════════════════════════
 // STATE
-let gameState = 'join'; // join, waiting, playing, results
+// ════════════════════════════════════
+let gameState = 'join';
 let gameCode = '';
 let playerName = '';
 let isHost = false;
-let players = {1: []}; // { gameCode: [player1, player2, ...] }
-let scores = {};
 let currentQuestion = 0;
 let selectedAnswer = null;
 let answeredCorrect = 0;
 let timeLeft = 10;
 let timerInterval = null;
-let syncInterval = null;
+let gameRef = null;
+let playersRef = null;
+let allPlayersData = {}; // To store everyone's names and scores locally
 
+// ════════════════════════════════════
 // GENERATE GAME CODE
+// ════════════════════════════════════
 function generateCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// CREATE GAME
-function createGame() {
+function showScreen(screenId) {
+  document.querySelectorAll('[id$="Screen"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById(screenId).classList.remove('hidden');
+}
+
+// ════════════════════════════════════
+// CREATE NEW GAME
+// ════════════════════════════════════
+function createNewGame() {
   const name = document.getElementById('playerName').value.trim();
   if (!name) {
     alert('Please enter your name');
@@ -691,35 +705,57 @@ function createGame() {
   playerName = name;
   gameCode = generateCode();
   isHost = true;
+
+  // Create game in Firebase
+  gameRef = db.ref(`games/${gameCode}`);
   
-  // Save to localStorage
-  const gameData = {
+  // Notice we added .then(() => { here
+  gameRef.set({
     code: gameCode,
     host: playerName,
-    players: [playerName],
     gameStarted: false,
     currentQuestion: 0,
-    scores: { [playerName]: 0 },
-    answers: {}
-  };
-  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
-  
-  showWaitingScreen();
-  startSync();
+    createdAt: Date.now(),
+    shuffledQuestions: null
+  }).then(() => {
+    // THIS ONLY RUNS AFTER FIREBASE SAYS "OK!"
+    
+    // Create players reference
+    playersRef = db.ref(`games/${gameCode}/players`);
+    return playersRef.child(playerName).set({
+      name: playerName,
+      score: 0,
+      joinedAt: Date.now()
+    });
+  }).then(() => {
+    // Now that the player is also saved, show the screen
+    document.getElementById('joinBtn').disabled = false;
+    showWaitingScreen();
+  }).catch((error) => {
+    console.error("Firebase failed:", error);
+    alert("Cloud connection failed. Check your internet or Firebase rules!");
+  });
 }
 
+// ════════════════════════════════════
 // JOIN GAME
+// ════════════════════════════════════
 function joinGame() {
   const name = document.getElementById('playerName').value.trim();
   const code = document.getElementById('gameCode').value.trim().toUpperCase();
 
-  if (!name || !code) {
-    alert('Please enter name and game code');
+  if (!name) {
+    alert('Please enter your name');
+    return;
+  }
+
+  if (!code) {
+    alert('Please enter a game code');
     return;
   }
 
   if (code.length !== 6) {
-    alert('Invalid game code');
+    alert('Game code must be 6 characters');
     return;
   }
 
@@ -727,130 +763,120 @@ function joinGame() {
   gameCode = code;
   isHost = false;
 
-  // Check if game exists
-  const gameData = JSON.parse(localStorage.getItem(`game_${code}`));
-  if (!gameData) {
-    alert('❌ Game code not found. Ask host for the correct code!');
-    return;
-  }
+  // Check if game exists in Firebase
+  db.ref(`games/${code}`).once('value').then(snapshot => {
+    if (!snapshot.exists()) {
+      alert('❌ Game code not found! Ask host for the correct code.');
+      return;
+    }
 
-  // Add player to game
-  if (!gameData.players.includes(name)) {
-    gameData.players.push(name);
-    gameData.scores[name] = 0;
-  }
-  localStorage.setItem(`game_${code}`, JSON.stringify(gameData));
+    // Join the game
+    gameRef = db.ref(`games/${code}`);
+    playersRef = db.ref(`games/${code}/players`);
+    
+    playersRef.child(playerName).set({
+      name: playerName,
+      score: 0,
+      joinedAt: Date.now()
+    });
 
-  showWaitingScreen();
-  startSync();
+    showWaitingScreen();
+  });
 }
 
+// ════════════════════════════════════
 // SHOW WAITING SCREEN
+// ════════════════════════════════════
 function showWaitingScreen() {
-  document.getElementById('joinScreen').classList.add('hidden');
-  document.getElementById('waitingScreen').classList.remove('hidden');
+  showScreen('waitingScreen');
   document.getElementById('displayCode').textContent = gameCode;
   gameState = 'waiting';
-  updateWaitingScreen();
-}
 
-// START SYNC (Real-time updates)
-function startSync() {
-  updateWaitingScreen();
-  
-  syncInterval = setInterval(() => {
-    if (gameState === 'waiting') {
-      updateWaitingScreen();
-    } else if (gameState === 'playing') {
-      const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-      if (gameData && gameData.gameStarted === false) {
-        // Game was stopped
-      }
+  // Listen to players in real-time
+  playersRef.on('value', snapshot => {
+    const players = snapshot.val() || {};
+    updatePlayersList(players);
+  });
+
+  // Listen for game start
+  if (isHost) {
+    document.getElementById('startBtn').style.display = 'block';
+  }
+
+  // Listen for game start signal
+  gameRef.child('gameStarted').on('value', snapshot => {
+    if (snapshot.val() && gameState === 'waiting') {
+      startGameScreen();
     }
-  }, 500); // Update every 500ms
+  });
 }
 
-// UPDATE WAITING SCREEN
-function updateWaitingScreen() {
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  
-  if (!gameData) return;
-
-  // Update players list
-  const playerList = gameData.players || [];
-  const html = playerList.map(p => `
+// ════════════════════════════════════
+// UPDATE PLAYERS LIST
+// ════════════════════════════════════
+function updatePlayersList(players) {
+  const html = Object.entries(players).map(([name, data]) => `
     <div class="player-item">
-      <div class="player-avatar">${p.charAt(0).toUpperCase()}</div>
-      <div class="player-name">${p}</div>
-      <div class="player-status">
-        ${gameData.host === p ? '<span class="role-badge">HOST</span>' : '<span class="status-badge">Ready</span>'}
-      </div>
+      <div class="player-avatar">${name.charAt(0).toUpperCase()}</div>
+      <div class="player-name">${name}</div>
+      ${gameRef && data.name === gameRef.host ? '<span class="role-badge">HOST</span>' : '<span class="status-badge">Ready</span>'}
     </div>
   `).join('');
   
   document.getElementById('playersList').innerHTML = html;
-  document.getElementById('playerCount').textContent = playerList.length;
-
-  // Show start button only for host
-  if (isHost) {
-    document.getElementById('startBtn').style.display = 'block';
-  } else {
-    document.getElementById('startBtn').style.display = 'none';
-  }
-
-  // Update connection status
-  if (playerList.length > 1) {
-    document.getElementById('connectionStatus').textContent = `✅ ${playerList.length} players connected`;
-    document.getElementById('connectionStatus').className = 'connection-status connected';
-  }
-
-  // Check if game should start (for non-hosts)
-  if (gameData.gameStarted && gameState === 'waiting') {
-    startGameFromSync();
-  }
+  document.getElementById('playerCount').textContent = Object.keys(players).length;
 }
 
+// ════════════════════════════════════
 // START GAME
+// ════════════════════════════════════
 function startGame() {
   if (!isHost) return;
 
-  // 🎲 SHUFFLE QUESTIONS!
   const shuffledQuestions = shuffleArray(questions);
-  
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  gameData.gameStarted = true;
-  gameData.currentQuestion = 0;
-  gameData.answers = {};
-  gameData.shuffledQuestions = shuffledQuestions; // Save shuffled questions
-  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
 
-  startGameFromSync();
+  gameRef.update({
+    gameStarted: true,
+    currentQuestion: 0,
+    shuffledQuestions: shuffledQuestions
+  });
+
+  startGameScreen();
 }
 
-// START GAME FROM SYNC (Both host and players)
-function startGameFromSync() {
-  clearInterval(syncInterval);
-  document.getElementById('waitingScreen').classList.add('hidden');
-  document.getElementById('questionScreen').classList.remove('hidden');
-  gameState = 'playing';
-  currentQuestion = 0;
-  selectedAnswer = null;
-  showQuestion();
+// ════════════════════════════════════
+// START GAME SCREEN
+// ════════════════════════════════════
+function startGameScreen() {
+  gameRef.child('shuffledQuestions').once('value').then(snapshot => {
+    const shuffled = snapshot.val();
+    if (shuffled) {
+      // Use Firebase shuffled questions
+      window.currentQuestions = shuffled;
+    } else {
+      window.currentQuestions = shuffleArray(questions);
+    }
+    
+    showScreen('questionScreen');
+    gameState = 'playing';
+    currentQuestion = 0;
+    selectedAnswer = null;
+    answeredCorrect = 0;
+    showQuestion();
+  });
 }
 
+// ════════════════════════════════════
 // SHOW QUESTION
+// ════════════════════════════════════
 function showQuestion() {
-  // Get shuffled questions from game data
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  const questionsToUse = gameData.shuffledQuestions || questions;
-  
-  if (currentQuestion >= questionsToUse.length) {
+  if (currentQuestion >= window.currentQuestions.length) {
     showResults();
     return;
   }
 
-  const q = questionsToUse[currentQuestion]; // Use shuffled questions
-  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${questionsToUse.length}`;
+  const q = window.currentQuestions[currentQuestion];
+  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${window.currentQuestions.length}`;
   document.getElementById('questionText').textContent = q.q;
   
   const html = q.options.map((opt, idx) => `
@@ -865,51 +891,55 @@ function showQuestion() {
   startTimer();
 }
 
+// ════════════════════════════════════
 // SELECT ANSWER
+// ════════════════════════════════════
 function selectAnswer(idx) {
   if (selectedAnswer !== null) return;
   
   selectedAnswer = idx;
+  clearInterval(timerInterval); // 🛑 STOP the timer immediately!
+
+  const q = window.currentQuestions[currentQuestion];
+  const isCorrect = idx === q.correct;
   
-  // Get shuffled questions
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  const questionsToUse = gameData.shuffledQuestions || questions;
-  const q = questionsToUse[currentQuestion]; // ✅ Use shuffled!
-  
-  document.getElementById(`opt-${idx}`).classList.add(idx === q.correct ? 'correct' : 'wrong');
-  
-  if (idx === q.correct) {
+  // Visual feedback
+  document.getElementById(`opt-${idx}`).classList.add(isCorrect ? 'correct' : 'wrong');
+  document.body.style.background = isCorrect ? "#4caf50" : "#f44336"; 
+
+  if (isCorrect) {
     answeredCorrect++;
-    scores[playerName] = (scores[playerName] || 0) + 1;
+    playersRef.child(playerName).update({ score: answeredCorrect });
   }
 
-  // Save answer to game data
-  if (!gameData.answers) gameData.answers = {};
-  gameData.answers[playerName] = idx;
-  localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
-
-  clearInterval(timerInterval);
+  // GIVE THEM A BREATHER (2 seconds to see if they were right)
   setTimeout(() => {
+    document.body.style.background = ""; // Reset background
     currentQuestion++;
     showQuestion();
-  }, 1500);
+  }, 2000); 
 }
 
+// ════════════════════════════════════
 // TIMER
+// ════════════════════════════════════
 function startTimer() {
+  // Clear any old intervals just in case
+  clearInterval(timerInterval); 
+  
+  timeLeft = 10;
   document.getElementById('timerText').textContent = `${timeLeft}s remaining`;
   document.getElementById('timerFill').style.width = '100%';
 
-  let elapsed = 0;
   timerInterval = setInterval(() => {
-    elapsed++;
     timeLeft--;
-    const percent = (1 - (elapsed / 10)) * 100;
+    const percent = (timeLeft / 10) * 100;
     document.getElementById('timerFill').style.width = percent + '%';
     document.getElementById('timerText').textContent = `${Math.max(0, timeLeft)}s remaining`;
 
-    if (elapsed >= 10) {
+    if (timeLeft <= 0) {
       clearInterval(timerInterval);
+      // ONLY skip if the player hasn't picked anything yet
       if (selectedAnswer === null) {
         currentQuestion++;
         showQuestion();
@@ -918,103 +948,118 @@ function startTimer() {
   }, 1000);
 }
 
+// ════════════════════════════════════
 // SHOW RESULTS
+// ════════════════════════════════════
 function showResults() {
   clearInterval(timerInterval);
-  clearInterval(syncInterval);
+  gameRef.child('gameStarted').off();
   
-  document.getElementById('questionScreen').classList.add('hidden');
-  document.getElementById('resultsScreen').classList.remove('hidden');
-  gameState = 'results';
+  playersRef.once('value').then(snapshot => {
+    const players = snapshot.val() || {};
+    
+    const sorted = Object.entries(players)
+      .map(([name, data]) => ({ name, score: data.score }))
+      .sort((a, b) => b.score - a.score);
+    
+    const html = sorted.map((entry, idx) => {
+      const medals = ['🥇', '🥈', '🥉'];
+      return `
+        <div class="leaderboard-item">
+          <span class="medal">${medals[idx] || '  '}</span>
+          <span class="leaderboard-rank">#${idx + 1}</span>
+          <span class="leaderboard-name">${entry.name}</span>
+          <span class="leaderboard-score">${entry.score} pts</span>
+        </div>
+      `;
+    }).join('');
 
-  // Get final scores from localStorage
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  const finalScores = gameData.scores || scores;
-  
-  // Sort scores
-  const sorted = Object.entries(finalScores).sort((a, b) => b[1] - a[1]);
-  
-  const html = sorted.map((entry, idx) => {
-    const medals = ['🥇', '🥈', '🥉'];
-    return `
-      <div class="leaderboard-item">
-        <span class="medal">${medals[idx] || '  '}</span>
-        <span class="leaderboard-rank">#${idx + 1}</span>
-        <span class="leaderboard-name">${entry[0]}</span>
-        <span class="leaderboard-score">${entry[1]} pts</span>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('leaderboardContent').innerHTML = html;
-  document.getElementById('yourScore').textContent = scores[playerName] || 0;
-  document.getElementById('correctCount').textContent = answeredCorrect;
+    document.getElementById('leaderboardContent').innerHTML = html;
+    document.getElementById('yourScore').textContent = players[playerName]?.score || 0;
+    document.getElementById('correctCount').textContent = answeredCorrect;
+    
+    showScreen('resultsScreen');
+    gameState = 'results';
+  });
 }
 
+// ════════════════════════════════════
 // PLAY AGAIN
+// ════════════════════════════════════
 function playAgain() {
-  if (isHost) {
-    // Reset game
-    const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-    gameData.gameStarted = false;
-    gameData.currentQuestion = 0;
-    gameData.answers = {};
-    localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
+  if (!isHost) {
+    alert('Only the host can start a new game');
+    return;
+  }
 
-    // Reset player scores
+  // Reset scores
+  playersRef.once('value').then(snapshot => {
+    const players = snapshot.val() || {};
+    Object.keys(players).forEach(name => {
+      playersRef.child(name).update({ score: 0 });
+    });
+
+    gameRef.update({
+      gameStarted: false,
+      currentQuestion: 0,
+      shuffledQuestions: null
+    });
+
     answeredCorrect = 0;
-    scores[playerName] = 0;
-    currentQuestion = 0;
-    selectedAnswer = null;
-
-    document.getElementById('resultsScreen').classList.add('hidden');
-    document.getElementById('waitingScreen').classList.remove('hidden');
+    showScreen('waitingScreen');
     gameState = 'waiting';
-    
-    startSync();
-  } else {
-    alert('⏳ Waiting for host to start new game...');
-  }
+  });
 }
 
+// ════════════════════════════════════
 // LEAVE GAME
+// ════════════════════════════════════
 function leaveGame() {
-  const gameData = JSON.parse(localStorage.getItem(`game_${gameCode}`));
-  
-  if (gameData && gameData.players) {
-    gameData.players = gameData.players.filter(p => p !== playerName);
-    
-    if (gameData.players.length === 0) {
-      // Delete game if no players left
-      localStorage.removeItem(`game_${gameCode}`);
-    } else {
-      localStorage.setItem(`game_${gameCode}`, JSON.stringify(gameData));
-    }
+  if (playersRef) {
+    playersRef.child(playerName).remove();
+  }
+  if (gameRef) {
+    gameRef.off();
+  }
+  if (playersRef) {
+    playersRef.off();
   }
 
-  clearInterval(syncInterval);
+  showScreen('joinScreen');
+  gameState = 'join';
+  gameCode = '';
+  playerName = '';
+  document.getElementById('playerName').value = '';
+  document.getElementById('gameCode').value = '';
   clearInterval(timerInterval);
-  location.reload();
 }
 
+// ════════════════════════════════════
 // COPY CODE
+// ════════════════════════════════════
 function copyCode() {
   navigator.clipboard.writeText(gameCode);
   const btn = document.getElementById('copyBtn');
   btn.textContent = '✅ Copied!';
   btn.classList.add('copied');
   setTimeout(() => {
-    btn.textContent = 'Copy Code';
+    btn.textContent = '📋 Copy Code';
     btn.classList.remove('copied');
   }, 2000);
 }
 
-// INIT
-document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const codeParam = params.get('code');
-  if (codeParam) {
-    document.getElementById('gameCode').value = codeParam;
+// ════════════════════════════════════
+// ERROR HANDLING
+// ════════════════════════════════════
+db.ref('.info/connected').on('value', snapshot => {
+  const connected = snapshot.val();
+  const status = document.getElementById('connectionStatus');
+  if (connected) {
+    status.innerHTML = '<span class="loading"></span> ✅ Connected to Firebase';
+    status.classList.remove('error');
+  } else {
+    status.innerHTML = '❌ Disconnected from Firebase';
+    status.classList.add('error');
   }
 });
 </script>
