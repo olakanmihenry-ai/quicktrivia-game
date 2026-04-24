@@ -126,6 +126,21 @@ body {
   50% { transform: translateY(-5px); filter: blur(1px); opacity: 0.8; }
 }
 
+#startGameBtn {
+  width: 90%;             /* Fills the screen width */
+  max-width: 400px;        /* Prevents it from getting too big on laptops */
+  padding: 20px;           /* Makes it thick/chunky */
+  font-size: 24px;         /* Big, readable text */
+  font-weight: bold;
+  background: #00ffcc;     /* That bright ghostly green */
+  color: black;
+  border-radius: 50px;     /* Rounded corners */
+  margin: 20px auto;       /* Centers it */
+  border: none;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.6); /* Makes it glow */
+  cursor: pointer;
+}
+
 .header p {
   opacity: 0.9;
   font-size: 14px;
@@ -618,8 +633,10 @@ body {
         <div id="playersList"></div>
       </div>
 
-      <button class="btn btn-primary" id="startBtn" onclick="startGame()" style="display:none;">🎲 Start Game</button>
-      <button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
+<button id="startGameBtn" class="btn-primary" onclick="startGame()" style="display: none;">
+  Start Game 👻
+</button>
+<button class="btn btn-secondary" onclick="leaveGame()">Leave Game</button>
 
       <div class="info-box">
         👉 Share the code above! Friends can join from any device in real-time!
@@ -856,12 +873,12 @@ function showWaitingScreen() {
 
   // Listen for game start
   if (isHost) {
-    document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('startGameBtn').style.display = 'block';
   }
 
   // Listen for game start signal
   gameRef.child('gameStarted').on('value', snapshot => {
-    if (snapshot.val() && gameState === 'waiting') {
+    if (snapshot.val() === true && gameState === 'waiting') {
       startGameScreen();
     }
   });
@@ -886,18 +903,27 @@ function updatePlayersList(players) {
 // ════════════════════════════════════
 // START GAME
 // ════════════════════════════════════
-function startGame() {
+async function startGame() {
   if (!isHost) return;
 
-  const shuffledQuestions = shuffleArray(questions);
+  // Get the 20 fresh questions from the API
+  const newQuestions = await fetchNewQuestions();
+  
+  if (!newQuestions) {
+    alert("Ghost error: Couldn't grab questions. Try again!");
+    return;
+  }
 
+  // Tell Firebase to update the game status for EVERYONE
   gameRef.update({
     gameStarted: true,
     currentQuestion: 0,
-    shuffledQuestions: shuffledQuestions
+    shuffledQuestions: newQuestions
+  }).then(() => {
+    console.log("Game started successfully!");
+  }).catch(err => {
+    console.error("Firebase Start Error:", err);
   });
-
-  startGameScreen();
 }
 
 // ════════════════════════════════════
@@ -949,12 +975,12 @@ function showQuestion() {
   }
 
   const q = window.currentQuestions[currentQuestion];
+
+  // Set the label (e.g., Question 5 of 20)
+  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${window.currentQuestions.length}`;
   
-  // 🔄 This will now automatically say "Question X of 20"
-  document.getElementById('questionNumber').textContent = 
-    `Question ${currentQuestion + 1} of ${window.currentQuestions.length}`;
-  
-  const html = q.options.map((opt, idx) => `
+  // Set the actual question text
+  document.getElementById('questionText').innerHTML = q.q;  const html = q.options.map((opt, idx) => `
     <div class="option" onclick="selectAnswer(${idx})" id="opt-${idx}" ${selectedAnswer !== null ? 'disabled' : ''}>
       ${String.fromCharCode(65 + idx)}) ${opt}
     </div>
@@ -962,7 +988,7 @@ function showQuestion() {
   document.getElementById('optionsContainer').innerHTML = html;
 
   selectedAnswer = null;
-  timeLeft = 10;
+  timeLeft = 15; // Reset time for each question
   startTimer();
 }
 
