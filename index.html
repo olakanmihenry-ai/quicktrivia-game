@@ -33,6 +33,24 @@ body {
   justify-content: center;
   padding: 20px;
   transition: background 0.5s ease; /* For smooth feedback changes */
+  body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  animation: flicker 10s infinite;
+}
+
+@keyframes flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 0; }
+  20%, 24%, 55% { opacity: 0.15; } /* Slight dark flash */
+}
 }
 
 /* The logic that moves the colors */
@@ -40,6 +58,45 @@ body {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+.ghost-element {
+  position: fixed; /* Changed from absolute to fixed */
+  top: 0;
+  left: 0;
+  opacity: 0.15;
+  z-index: -1; 
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Individual ghost speeds and paths */
+.g1 { font-size: 40px; animation: float1 25s linear infinite; }
+.g2 { font-size: 30px; animation: float2 18s linear infinite; }
+.g3 { font-size: 50px; animation: float3 30s linear infinite; }
+.g4 { font-size: 35px; animation: float1 22s linear infinite reverse; }
+
+@keyframes float1 {
+  0%   { transform: translate(-10vw, 20vh) rotate(0deg); }
+  50%  { transform: translate(50vw, 50vh) rotate(180deg); }
+  100% { transform: translate(110vw, 20vh) rotate(360deg); }
+}
+
+@keyframes float2 {
+  0%   { transform: translate(110vw, 80vh) rotate(0deg); }
+  50%  { transform: translate(40vw, 20vh) rotate(-180deg); }
+  100% { transform: translate(-10vw, 80vh) rotate(-360deg); }
+}
+
+@keyframes float3 {
+  0%   { transform: translate(50vw, 110vh) rotate(0deg); }
+  100% { transform: translate(50vw, -10vh) rotate(360deg); }
+}
+
+@keyframes float4 {
+  0%   { transform: translate(-10vw, 80vh) rotate(0deg); }
+  50%  { transform: translate(50vw, 20vh) rotate(180deg); }
+  100% { transform: translate(110vw, 80vh) rotate(360deg); }
 }
 
 .container {
@@ -60,7 +117,13 @@ body {
 
 .header h1 {
   font-size: 32px;
-  margin-bottom: 5px;
+  text-shadow: 2px 2px 10px rgba(255, 255, 255, 0.5);
+  animation: haunt 3s ease-in-out infinite;
+}
+
+@keyframes haunt {
+  0%, 100% { transform: translateY(0); filter: blur(0px); }
+  50% { transform: translateY(-5px); filter: blur(1px); opacity: 0.8; }
 }
 
 .header p {
@@ -125,13 +188,17 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #2c3e50, #000000); /* Darker, spookier colors */
+  color: #00ffcc; /* Ghostly neon text */
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+  border: 1px solid rgba(0, 255, 204, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 25px rgba(0, 255, 204, 0.6);
+  transform: scale(1.02);
 }
 
 .btn-primary:disabled {
@@ -495,6 +562,10 @@ body {
 </head>
 <body>
 
+<div class="ghost-element g1">👻</div>
+<div class="ghost-element g2">💀</div>
+<div class="ghost-element g3">👻</div>
+<div class="ghost-element g4">💀</div>
 <div class="container">
   <div class="header">
     <h1>👻 GhostTrivia</h1>
@@ -522,6 +593,10 @@ body {
       <div class="info-box">
         🔥 <strong>Connected to Firebase!</strong> Players from anywhere can join in real-time!
       </div>
+    </div>
+    <div class="mt-6 text-center text-sm text-gray-500">
+            <p>© 2026 GhostTrivia. All rights reserved.</p>
+        </div>
     </div>
 
     <!-- WAITING SCREEN -->
@@ -616,43 +691,32 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ════════════════════════════════════
-// GAME DATA
+// AUTOMATIC GHOST QUESTIONS (API)
 // ════════════════════════════════════
-const questions = [
-  { q: "Which is the only country in the world to have three official capital cities?", options: ["South Africa", "Nigeria", "Australia", "Bolivia"], correct: 0 },
-  { q: "What is the largest desert in the world (including polar regions)?", options: ["Sahara", "Gobi", "Antarctica", "Kalahari"], correct: 2 },
-  { q: "Mount Kilimanjaro, the highest mountain in Africa, is located in which country?", options: ["Kenya", "Tanzania", "Ethiopia", "Uganda"], correct: 1 },
-  { q: "Which Nigerian state is known as the 'Gateway State'?", options: ["Lagos", "Ogun", "Kwara", "Edo"], correct: 1 },
-  { q: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], correct: 2 },
-  { q: "Which country has the most natural lakes?", options: ["Canada", "Russia", "USA", "Brazil"], correct: 0 },
-  { q: "The Great Barrier Reef is located off the coast of which country?", options: ["Australia", "Indonesia", "Philippines", "Fiji"], correct: 0 },
-  { q: "Which river is the longest in the world?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], correct: 1 },
-  { q: "What is the smallest country in the world by land area?", options: ["Monaco", "Vatican City", "Nauru", "San Marino"], correct: 1 },
-  { q: "Which African country was formerly known as Abyssinia?", options: ["Ethiopia", "Sudan", "Somalia", "Kenya"], correct: 0 },
-  { q: "What is the 'powerhouse' of the cell?", options: ["Nucleus", "Ribosome", "Mitochondria", "Vacuole"], correct: 2 },
-  { q: "Which blood type is known as the universal donor?", options: ["A+", "B-", "AB+", "O-"], correct: 3 },
-  { q: "What is the largest organ in the human body?", options: ["Heart", "Liver", "Skin", "Lungs"], correct: 2 },
-  { q: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], correct: 1 },
-  { q: "What is the chemical symbol for gold?", options: ["Au", "Ag", "Gd", "Go"], correct: 0 },
-  { q: "Who developed the theory of General Relativity?", options: ["Isaac Newton", "Albert Einstein", "Nikola Tesla", "Stephen Hawking"], correct: 1 },
-  { q: "What is the unit of electrical resistance?", options: ["Volt", "Ampere", "Watt", "Ohm"], correct: 3 },
-  { q: "Which of these is a non-renewable source of energy?", options: ["Solar", "Wind", "Coal", "Hydroelectric"], correct: 2 },
-  { q: "What is the most abundant gas in Earth's atmosphere?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], correct: 2 },
-  { q: "What is the chemical formula for common table salt?", options: ["H2O", "NaCl", "CO2", "KCl"], correct: 1 },
-  { q: "Which element has the atomic number 1?", options: ["Helium", "Oxygen", "Hydrogen", "Carbon"], correct: 2 },
-  { q: "What does GDP stand for?", options: ["Gross Domestic Product", "General Deposit Profit", "Global Development Plan", "Gross Daily Percentage"], correct: 0 },
-  { q: "In the stock market, what does 'IPO' stand for?", options: ["Internal Profit Option", "Initial Public Offering", "International Payment Order", "Investment Portfolio Overhaul"], correct: 1 },
-  { q: "Which organization is responsible for issuing the Naira in Nigeria?", options: ["EFCC", "CBN", "FIRS", "NNPC"], correct: 1 },
-  { q: "What is the term for a sensationalized or exaggerated news headline?", options: ["Hard news", "Clickbait", "Feature story", "Editorial"], correct: 1 },
-  { q: "What is 'Libel' in journalism?", options: ["Written defamation", "Spoken defamation", "A type of camera lens", "A secret source"], correct: 0 },
-  { q: "Which prize is considered the highest honor in American journalism?", options: ["Oscar", "Grammy", "Pulitzer Prize", "Nobel Prize"], correct: 2 },
-  { q: "What is the square root of 144?", options: ["10", "12", "14", "16"], correct: 1 },
-  { q: "What is the value of Pi (π) to two decimal places?", options: ["3.12", "3.16", "3.14", "3.18"], correct: 2 },
-  { q: "If a triangle has angles of 90° and 45°, what is the third angle?", options: ["45°", "55°", "90°", "35°"], correct: 0 },
-  { q: "What is 7 multiplied by 8?", options: ["54", "56", "62", "64"], correct: 1 },
-  { q: "What is the Roman numeral for 50?", options: ["V", "X", "L", "C"], correct: 2 },
-  { q: "Which of these is a prime number?", options: ["9", "15", "17", "21"], correct: 2 }
-];
+async function fetchNewQuestions() {
+  try {
+    const response = await fetch('https://opentdb.com/api.php?amount=20&type=multiple');
+    const data = await response.json();
+
+    if (data.results && data.results.length > 0) {
+      return data.results.map(item => {
+        const options = [...item.incorrect_answers];
+        const correctIdx = Math.floor(Math.random() * 4);
+        options.splice(correctIdx, 0, item.correct_answer);
+
+        return {
+          q: item.question,
+          options: options,
+          correct: correctIdx
+        };
+      });
+    }
+    return null; 
+  } catch (error) {
+    console.error("Failed to fetch trivia:", error);
+    return null;
+  }
+}
 
 // 🎲 SHUFFLE FUNCTION
 function shuffleArray(array) {
@@ -674,7 +738,7 @@ let isHost = false;
 let currentQuestion = 0;
 let selectedAnswer = null;
 let answeredCorrect = 0;
-let timeLeft = 10;
+let timeLeft = 15;
 let timerInterval = null;
 let gameRef = null;
 let playersRef = null;
@@ -706,35 +770,27 @@ function createNewGame() {
   gameCode = generateCode();
   isHost = true;
 
-  // Create game in Firebase
-  gameRef = db.ref(`games/${gameCode}`);
-  
-  // Notice we added .then(() => { here
-  gameRef.set({
-    code: gameCode,
-    host: playerName,
-    gameStarted: false,
-    currentQuestion: 0,
-    createdAt: Date.now(),
-    shuffledQuestions: null
-  }).then(() => {
-    // THIS ONLY RUNS AFTER FIREBASE SAYS "OK!"
-    
-    // Create players reference
-    playersRef = db.ref(`games/${gameCode}/players`);
-    return playersRef.child(playerName).set({
-      name: playerName,
-      score: 0,
-      joinedAt: Date.now()
-    });
-  }).then(() => {
-    // Now that the player is also saved, show the screen
-    document.getElementById('joinBtn').disabled = false;
-    showWaitingScreen();
-  }).catch((error) => {
-    console.error("Firebase failed:", error);
-    alert("Cloud connection failed. Check your internet or Firebase rules!");
+gameRef = db.ref(`games/${gameCode}`);
+gameRef.set({
+  code: gameCode,
+  host: playerName,
+  gameStarted: false,
+  currentQuestion: 0,
+  createdAt: Date.now(),
+  shuffledQuestions: null
+}).then(() => {
+  // ONLY now do we create the players list
+  playersRef = db.ref(`games/${gameCode}/players`);
+  return playersRef.child(playerName).set({
+    name: playerName,
+    score: 0,
+    joinedAt: Date.now()
   });
+}).then(() => {
+  // FINALLY show the screen
+  document.getElementById('joinBtn').disabled = false;
+  showWaitingScreen();
+});
 }
 
 // ════════════════════════════════════
@@ -875,9 +931,28 @@ function showQuestion() {
     return;
   }
 
+  // 👻 GHOST TENSION LOGIC
+  const ghosts = document.querySelectorAll('.ghost-element');
+  if (currentQuestion >= 15) {
+    document.body.style.animationDuration = '2s'; // Move this HERE (outside the loop)
+    ghosts.forEach(ghost => {
+      ghost.style.animationDuration = '5s'; 
+      ghost.style.filter = 'hue-rotate(90deg) brightness(1.5)';
+    });
+  } else {
+    document.body.style.animationDuration = '15s'; // Reset background speed
+    ghosts.forEach((ghost, idx) => {
+      const speeds = ['25s', '18s', '30s', '22s'];
+      ghost.style.animationDuration = speeds[idx];
+      ghost.style.filter = '';
+    });
+  }
+
   const q = window.currentQuestions[currentQuestion];
-  document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${window.currentQuestions.length}`;
-  document.getElementById('questionText').textContent = q.q;
+  
+  // 🔄 This will now automatically say "Question X of 20"
+  document.getElementById('questionNumber').textContent = 
+    `Question ${currentQuestion + 1} of ${window.currentQuestions.length}`;
   
   const html = q.options.map((opt, idx) => `
     <div class="option" onclick="selectAnswer(${idx})" id="opt-${idx}" ${selectedAnswer !== null ? 'disabled' : ''}>
@@ -924,25 +999,36 @@ function selectAnswer(idx) {
 // TIMER
 // ════════════════════════════════════
 function startTimer() {
-  // Clear any old intervals just in case
   clearInterval(timerInterval); 
   
-  timeLeft = 10;
+  const totalTime = 15; // 👈 Set this to 15 (or 20 if you prefer)
+  timeLeft = totalTime; 
+  
   document.getElementById('timerText').textContent = `${timeLeft}s remaining`;
   document.getElementById('timerFill').style.width = '100%';
 
   timerInterval = setInterval(() => {
     timeLeft--;
-    const percent = (timeLeft / 10) * 100;
+    
+    // Calculate percentage based on the new totalTime
+    const percent = (timeLeft / totalTime) * 100;
+    
     document.getElementById('timerFill').style.width = percent + '%';
     document.getElementById('timerText').textContent = `${Math.max(0, timeLeft)}s remaining`;
+    // Turn the bar red when only 5 seconds are left
+    document.getElementById('timerFill').style.background = timeLeft <= 5 ? "#f44336" : "linear-gradient(90deg, #667eea, #764ba2)";
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      // ONLY skip if the player hasn't picked anything yet
       if (selectedAnswer === null) {
-        currentQuestion++;
-        showQuestion();
+        // If they ran out of time, show them they were wrong
+        document.body.style.background = "#f44336"; 
+        
+        setTimeout(() => {
+          document.body.style.background = "";
+          currentQuestion++;
+          showQuestion();
+        }, 1500);
       }
     }
   }, 1000);
@@ -953,20 +1039,24 @@ function startTimer() {
 // ════════════════════════════════════
 function showResults() {
   clearInterval(timerInterval);
-  gameRef.child('gameStarted').off();
-  
-  playersRef.once('value').then(snapshot => {
+  showScreen('resultsScreen');
+  gameState = 'results';
+
+  // 🔄 THE SECRET SAUCE: Use .on instead of .once
+  playersRef.on('value', (snapshot) => {
     const players = snapshot.val() || {};
     
+    // Convert the database object into a list we can sort
     const sorted = Object.entries(players)
       .map(([name, data]) => ({ name, score: data.score }))
       .sort((a, b) => b.score - a.score);
     
+    // Build the leaderboard HTML
     const html = sorted.map((entry, idx) => {
       const medals = ['🥇', '🥈', '🥉'];
       return `
         <div class="leaderboard-item">
-          <span class="medal">${medals[idx] || '  '}</span>
+          <span class="medal">${medals[idx] || '👻'}</span>
           <span class="leaderboard-rank">#${idx + 1}</span>
           <span class="leaderboard-name">${entry.name}</span>
           <span class="leaderboard-score">${entry.score} pts</span>
@@ -974,12 +1064,12 @@ function showResults() {
       `;
     }).join('');
 
+    // Update the screen instantly
     document.getElementById('leaderboardContent').innerHTML = html;
+    
+    // Update your personal stats at the bottom
     document.getElementById('yourScore').textContent = players[playerName]?.score || 0;
     document.getElementById('correctCount').textContent = answeredCorrect;
-    
-    showScreen('resultsScreen');
-    gameState = 'results';
   });
 }
 
@@ -1016,6 +1106,7 @@ function playAgain() {
 // ════════════════════════════════════
 function leaveGame() {
   if (playersRef) {
+    playersRef.off(); // 🛑 This stops the live leaderboard listener
     playersRef.child(playerName).remove();
   }
   if (gameRef) {
